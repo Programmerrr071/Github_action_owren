@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="tk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bellikler</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    form.add p { margin: .5rem 0; }
+    input[type=text], textarea { width: 100%; padding: .5rem; box-sizing: border-box; }
+    .note { display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid #ccc; border-radius: 8px; padding: .6rem .8rem; margin: .5rem 0; }
+    .done .t { text-decoration: line-through; color: #888; }
+    .note form { display: inline; }
+    button { cursor: pointer; padding: .3rem .7rem; }
+  </style>
+</head>
+<body>
+  <h1>Bellikler</h1>
+  <form method="post" class="add">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Goş</button>
+  </form>
+  <hr>
+  {% for n in notes %}
+    <div class="note {% if n.done %}done{% endif %}">
+      <div class="t"><strong>{{ n.title }}</strong><br>{{ n.text }}</div>
+      <div>
+        <form method="post" action="{% url 'note_toggle' n.pk %}">{% csrf_token %}<button>{% if n.done %}↩{% else %}✓{% endif %}</button></form>
+        <form method="post" action="{% url 'note_delete' n.pk %}">{% csrf_token %}<button>🗑</button></form>
+      </div>
+    </div>
+  {% empty %}
+    <p>Heniz bellik ýok.</p>
+  {% endfor %}
+</body>
+</html>
