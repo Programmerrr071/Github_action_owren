@@ -1,10 +1,12 @@
-name: My Django_project CI
+name: Deploy Django app
+
 on:
   push:
-  pull_request:
+    branches:
+      - main
 
 jobs:
-  connect:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -13,20 +15,40 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y sshpass
 
-      - name: Connect to VPS
+      - name: Deploy to VPS
         env:
-          SSHPASS: ${{ secrets.pass }}
+          SSHPASS: ${{ secrets.PASS }}
         run: |
-          sshpass -e ssh \
-            -o StrictHostKeyChecking=accept-new \
-            -p 22 \
-            "root@${{ vars.my_ip }}" \
-            'bash -s' <<'EOF'
-            if command -v python3 >/dev/null 2>&1; then
-              echo "[+] Python already installed: $(python3 --version)"
+          sshpass -e ssh -o StrictHostKeyChecking=no -p 22 root@${{ vars.MY_IP }} 'bash -s' <<'EOF'
+            set -e
+
+            REPO_DIR="/opt/Github_action_owren"
+            REPO_URL="https://github.com/Programmerrr071/Github_action_owren.git"
+
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone "$REPO_URL" "$REPO_DIR"
             else
-              echo "[-] Python missing. Installing..."
-              sudo apt-get update
-              sudo apt-get install -y python3 python3-pip
+              cd "$REPO_DIR"
+              git pull origin main
             fi
+
+            cd "$REPO_DIR"
+
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+
+            . venv/bin/activate
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput || true
+
+            if pgrep -f "manage.py runserver" >/dev/null; then
+              pkill -f "manage.py runserver" || true
+            fi
+
+            nohup python manage.py runserver 0.0.0.0:8000 > /tmp/django.log 2>&1 &
+            echo "Django started on port 8000"
           EOF
