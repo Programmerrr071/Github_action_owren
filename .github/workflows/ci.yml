@@ -1,4 +1,4 @@
-name: My Django Project CI
+name: My Django_project CI
 on: push
 
 jobs:
