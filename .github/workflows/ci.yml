@@ -13,10 +13,10 @@ jobs:
       
       - name: Connect to VPS
         run: |
-          export SSHPASS="gQa4usuhWz4w"
+          export SSHPASS=${{ secrets.pass}}
 
           sshpass -e ssh \
             -o StrictHostKeyChecking=accept-new \
             -p 22 \
-            root@153.75.83.209 \
+            root@${{ vars.my_ip }} \
             "whoami && hostname && uptime"
