@@ -1,5 +1,7 @@
 name: My Django_project CI
-on: push
+on:
+  push:
+  pull_request:
 
 jobs:
   connect:
@@ -10,17 +12,21 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y sshpass
-      
-      - name: Connect to VPS
-        run: |
-          export SSHPASS=${{ secrets.pass}}
 
+      - name: Connect to VPS
+        env:
+          SSHPASS: ${{ secrets.pass }}
+        run: |
           sshpass -e ssh \
             -o StrictHostKeyChecking=accept-new \
             -p 22 \
-            root@${{ vars.my_ip }} \
-            "if command -v python3 &>/dev/null; then
-                echo "[+] Python eýýäm bar: $(python3 --version)"
+            "root@${{ vars.my_ip }}" \
+            'bash -s' <<'EOF'
+            if command -v python3 >/dev/null 2>&1; then
+              echo "[+] Python already installed: $(python3 --version)"
             else
-                echo "[-] Python tapylmady. Gurnalyar..."
-                sudo apt update && sudo apt install -y python3 python3-pip"
+              echo "[-] Python missing. Installing..."
+              sudo apt-get update
+              sudo apt-get install -y python3 python3-pip
+            fi
+          EOF
