@@ -1,3 +1,4 @@
+name: My Django Project CI
 on: push
 
 jobs:
