@@ -19,4 +19,8 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             -p 22 \
             root@${{ vars.my_ip }} \
-            "whoami && hostname && uptime"
+            "if command -v python3 &>/dev/null; then
+                echo "[+] Python eýýäm bar: $(python3 --version)"
+            else
+                echo "[-] Python tapylmady. Gurnalyar..."
+                sudo apt update && sudo apt install -y python3 python3-pip"
