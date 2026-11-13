@@ -25,6 +25,13 @@ jobs:
             REPO_DIR="/opt/Github_action_owren"
             REPO_URL="https://github.com/Programmerrr071/Github_action_owren.git"
 
+            echo "Installing system packages..."
+
+            apt-get update
+            apt-get install -y python3 python3-venv python3-pip git
+
+            echo "Preparing project..."
+
             if [ ! -d "$REPO_DIR/.git" ]; then
               git clone "$REPO_URL" "$REPO_DIR"
             else
@@ -34,21 +41,45 @@ jobs:
 
             cd "$REPO_DIR"
 
-            if [ ! -d "venv" ]; then
+            echo "Creating virtual environment..."
+
+            if [ ! -f "venv/bin/activate" ]; then
+              rm -rf venv
               python3 -m venv venv
             fi
 
-            . venv/bin/activate
+            echo "Activating virtual environment..."
+
+            source venv/bin/activate
+
+            echo "Installing requirements..."
+
             python -m pip install --upgrade pip
             pip install -r requirements.txt
 
-            python manage.py migrate --noinput
-            python manage.py collectstatic --noinput || true
+            echo "Running migrations..."
 
-            if pgrep -f "manage.py runserver" >/dev/null; then
-              pkill -f "manage.py runserver" || true
+            python manage.py migrate --noinput
+
+            echo "Collecting static files..."
+
+            python manage.py collectstatic --noinput
+
+            echo "Restarting Django..."
+
+            pkill -f "[m]anage.py runserver" || true
+
+            nohup "$REPO_DIR/venv/bin/python" manage.py runserver 0.0.0.0:8000 > /tmp/django.log 2>&1 < /dev/null &
+
+            sleep 3
+
+            if pgrep -f "[m]anage.py runserver" >/dev/null; then
+              echo "Django started successfully on port 8000"
+            else
+              echo "Django failed to start!"
+              cat /tmp/django.log
+              exit 1
             fi
 
-            nohup python manage.py runserver 0.0.0.0:8000 > /tmp/django.log 2>&1 &
-            echo "Django started on port 8000"
+            echo "Deployment completed successfully!"
           EOF
