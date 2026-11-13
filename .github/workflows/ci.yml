@@ -1,29 +1,54 @@
-name: My first ci
-on: push
+name: Deploy Django app
+
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Hello
-        run: echo "Hello world"
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
+      - name: Install sshpass
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest pytest-django
+          sudo apt-get update
+          sudo apt-get install -y sshpass
 
-      - name: Run tests
-        run: pytest -v
+      - name: Deploy to VPS
         env:
-          DJANGO_SETTINGS_MODULE: config.settings
+          SSHPASS: ${{ secrets.PASS }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no -p 22 root@${{ vars.MY_IP }} 'bash -s' <<'EOF'
+            set -e
+
+            REPO_DIR="/opt/Github_action_owren"
+            REPO_URL="https://github.com/Programmerrr071/Github_action_owren.git"
+
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              git clone "$REPO_URL" "$REPO_DIR"
+            else
+              cd "$REPO_DIR"
+              git pull origin main
+            fi
+
+            cd "$REPO_DIR"
+
+            if [ ! -d "venv" ]; then
+              python3 -m venv venv
+            fi
+
+            . venv/bin/activate
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput || true
+
+            if pgrep -f "manage.py runserver" >/dev/null; then
+              pkill -f "manage.py runserver" || true
+            fi
+
+            nohup python manage.py runserver 0.0.0.0:8000 > /tmp/django.log 2>&1 &
+            echo "Django started on port 8000"
+          EOF
